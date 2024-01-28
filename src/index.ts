@@ -9,7 +9,8 @@ if (!loginData.cookies || !loginData.tokens) {
   process.exit(1);
 }
 
-// extract id from cookies
+loginData.cookies.push("timezoneOffset=3600,0");
+
 const steamId = loginData.cookies
   .find((c) => c.startsWith("steamLoginSecure"))
   ?.split("%7C%7C")?.[0]
@@ -19,12 +20,24 @@ const sessionId = loginData.cookies
   .find((c) => c.startsWith("sessionid"))
   ?.split("=")?.[1];
 
+const postHeaders = {
+  Cookie: loginData.cookies.join(";"),
+  Origin: "https://steamcommunity.com",
+  Referer: "https://steamcommunity.com/tradingcards/boostercreator/",
+  Host: "steamcommunity.com",
+  UserAgent:
+    "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36",
+  ContentType: "application/x-www-form-urlencoded; charset=UTF-8",
+};
+
+const getHeaders = {
+  Cookie: loginData.cookies.join(";"),
+};
+
 const boosterInfo = await fetch(
   "https://steamcommunity.com/tradingcards/boostercreator/",
   {
-    headers: {
-      Cookie: loginData.cookies.join(";"),
-    },
+    headers: getHeaders,
   },
 );
 
@@ -40,12 +53,18 @@ if (!match || !match[1]) {
   process.exit(1);
 }
 
-const boosterApps = JSON.parse(match[1].replace(/,\s*$/, ""));
+const boosterApps = JSON.parse(match[1].replace(/,\s*$/, "")) as BoosterApp[];
 const appsToBooster = (await import("../apps.json")).default;
 
-const boosterAppsFiltered = boosterApps.filter((app: any) =>
-  appsToBooster.includes(app.appid),
-);
+const boosterAppsFiltered = boosterApps
+  .filter((app) => appsToBooster.includes(app.appid))
+  // @ts-ignore
+  .sort((a, b) =>
+    a?.unavailable
+      ? // @ts-ignore
+        a.available_at_time > b.available_at_time
+      : a.price > b.price,
+  );
 
 consola.info(
   `Found ${boosterAppsFiltered.length}/${appsToBooster.length} apps to boost.`,
@@ -79,15 +98,7 @@ for (const app of boosterAppsFiltered) {
     "https://steamcommunity.com/tradingcards/ajaxcreatebooster/",
     {
       method: "POST",
-      headers: {
-        Cookie: loginData.cookies.join(";"),
-        Origin: "https://steamcommunity.com",
-        Referer: "https://steamcommunity.com/tradingcards/boostercreator/",
-        Host: "steamcommunity.com",
-        UserAgent:
-          "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36",
-        ContentType: "application/x-www-form-urlencoded; charset=UTF-8",
-      },
+      headers: postHeaders,
       // @ts-ignore
       body: new URLSearchParams({
         appid: `${app.appid}`,
@@ -119,15 +130,7 @@ for (const app of boosterAppsFiltered) {
     `https://steamcommunity.com/profiles/${steamId}/ajaxunpackbooster/`,
     {
       method: "POST",
-      headers: {
-        Cookie: loginData.cookies.join(";"),
-        Origin: "https://steamcommunity.com",
-        Referer: "https://steamcommunity.com/tradingcards/boostercreator/",
-        Host: "steamcommunity.com",
-        UserAgent:
-          "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36",
-        ContentType: "application/x-www-form-urlencoded; charset=UTF-8",
-      },
+      headers: postHeaders,
       // @ts-ignore
       body: new URLSearchParams({
         appid: app.appid,
@@ -186,7 +189,6 @@ async function login(): Promise<{
       return resolve(await writeSession(session));
     }
 
-    // Create our LoginSession and start a QR login session.
     session.loginTimeout = 120000;
     let startResult = await session.startWithQR();
 
@@ -259,4 +261,13 @@ export interface RgItem {
   name: string;
   series: number;
   foil: boolean;
+}
+
+export interface BoosterApp {
+  appid: number;
+  name: string;
+  series: number;
+  price: string;
+  unavailable?: boolean;
+  available_at_time?: string;
 }
