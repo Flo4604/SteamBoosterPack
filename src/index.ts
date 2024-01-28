@@ -54,27 +54,17 @@ if (!match || !match[1]) {
 }
 
 const boosterApps = JSON.parse(match[1].replace(/,\s*$/, "")) as BoosterApp[];
-const appsToBooster = (await import("../apps.json")).default;
+const boostList = (await import("../apps.json")).default;
 
-const boosterAppsFiltered = boosterApps
-  .filter((app) => appsToBooster.includes(app.appid))
-  // @ts-ignore
-  .sort((a, b) =>
-    a?.unavailable
-      ? // @ts-ignore
-        a.available_at_time > b.available_at_time
-      : a.price > b.price,
-  );
+let appsToBoost = boosterApps.filter((app) => boostList.includes(app.appid));
 
-consola.info(
-  `Found ${boosterAppsFiltered.length}/${appsToBooster.length} apps to boost.`,
-);
+consola.info(`Found ${appsToBoost.length}/${boostList.length} apps to boost.`);
 
 let i = 1;
 let gemsRemaining = 99999;
-for (const app of boosterAppsFiltered) {
+for (const app of appsToBoost) {
   let logStart = `${app.name} (${app.appid}) - `;
-  let logEnd = ` (${i++}/${boosterAppsFiltered.length})`;
+  let logEnd = ` (${i++}/${appsToBoost.length})`;
 
   if (app?.unavailable === true) {
     consola.info(
@@ -85,7 +75,7 @@ for (const app of boosterAppsFiltered) {
     continue;
   }
 
-  if (gemsRemaining - app.price < 0) {
+  if (gemsRemaining - parseInt(app.price) < 0) {
     consola.info(
       logStart +
         `Skipping because we only have ${gemsRemaining} gems left` +
