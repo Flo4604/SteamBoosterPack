@@ -10,7 +10,7 @@ if (!loginData.cookies || !loginData.tokens) {
   process.exit(1);
 }
 
-loginData.cookies.push("timezoneOffset=3600,0");
+loginData.cookies.push(`timezoneOffset=${config.timezoneOffset},0`);
 
 craftBoosterPacks();
 
