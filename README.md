@@ -1,4 +1,4 @@
-# steamautobooster
+# SteamBoosterPack
 
 To install dependencies:
 
