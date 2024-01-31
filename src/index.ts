@@ -78,11 +78,11 @@ async function craftBoosterPacks() {
   let i = 1;
   let gemsRemaining = 99999;
   for (const app of appsToBoost) {
-    let logStart = `${app.name} (${app.appid}) - `;
-    let logEnd = ` (${i++}/${appsToBoost.length})`;
+    let logStart: string = `${app.name} (${app.appid}) - `;
+    let logEnd: string = ` (${i++}/${appsToBoost.length})`;
 
     if (app?.unavailable === true) {
-      consola.info(
+      consola.fail(
         logStart +
           `Skipping because it is unavailable until ${app.available_at_time}` +
           logEnd,
